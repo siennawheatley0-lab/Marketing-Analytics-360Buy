@@ -1,0 +1,113 @@
+
+R version 4.5.1 (2025-06-13) -- "Great Square Root"
+Copyright (C) 2025 The R Foundation for Statistical Computing
+Platform: x86_64-apple-darwin20
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[R.app GUI 1.82 (8536) x86_64-apple-darwin20]
+
+[Workspace restored from /Users/siennawheatley/.RData]
+[History restored from /Users/siennawheatley/.Rapp.history]
+
+> library(readxl)
+> library(dplyr)
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+> library(ggplot2)
+> library(tidyr)
+> 
+> data <- read_excel(file.choose())
+2026-03-26 19:08:53.450 R[81378:4140886] The class 'NSOpenPanel' overrides the method identifier.  This method is implemented by class 'NSWindow'
+                                                                                                                                                   
+> cluster_data <- data %>%
++   select(ConstUp, ReplacReminder, ProdReturn, ProInsuCov, CusChoice)
+> 
+> cluster_scaled <- scale(cluster_data)
+> 
+> wss <- numeric(10)
+> 
+> for (i in 1:10) {
++   k <- kmeans(cluster_scaled, centers = i, nstart = 25)
++   wss[i] <- k$tot.withinss
++ }
+> 
+> elbow_data <- data.frame(k = 1:10, WSS = wss)
+> 
+> ggplot(elbow_data, aes(x = k, y = WSS)) +
++   geom_line() +
++   geom_point() +
++   labs(title = "Elbow Plot",
++        x = "Number of Clusters",
++        y = "Within-Cluster Sum of Squares") +
++   theme_minimal()
+> k3 <- kmeans(cluster_scaled, centers = 3, nstart = 25)
+> 
+> data$Cluster <- k3$cluster
+> table_means <- data %>%
++   group_by(Cluster) %>%
++   summarise(
++     ConstUp = mean(ConstUp, na.rm = TRUE),
++     ReplacReminder = mean(ReplacReminder, na.rm = TRUE),
++     ProdReturn = mean(ProdReturn, na.rm = TRUE),
++     ProInsuCov = mean(ProInsuCov, na.rm = TRUE),
++     CusChoice = mean(CusChoice, na.rm = TRUE)
++   )
+> 
+> table_means
+# A tibble: 3 × 6
+  Cluster ConstUp ReplacReminder ProdReturn ProInsuCov CusChoice
+    <int>   <dbl>          <dbl>      <dbl>      <dbl>     <dbl>
+1       1    3.03           3.11       3.22       2.36      3.45
+2       2    4.35           5.79       5.07       4.43      5.07
+3       3    5.54           3.49       2.49       4.50      5.43
+> long_data <- table_means %>%
++   pivot_longer(-Cluster, names_to = "Variable", values_to = "Value")
+> 
+> ggplot(long_data, aes(x = Variable, y = Value, fill = factor(Cluster))) +
++   geom_bar(stat = "identity", position = "dodge") +
++   labs(title = "Cluster Characteristics Across Product Attributes",
++        x = "Product Attributes",
++        y = "Mean Importance Rating",
++        fill = "Cluster") +
++   theme_minimal() +
++   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+> cluster_sizes <- data %>%
++   group_by(Cluster) %>%
++   summarise(count = n())
+> 
+> ggplot(cluster_sizes, aes(x = factor(Cluster), y = count, fill = factor(Cluster))) +
++   geom_bar(stat = "identity") +
++   labs(title = "Cluster Sizes",
++        x = "Cluster",
++        y = "Number of Customers",
++        fill = "Cluster") +
++   theme_minimal()
+> ggplot(data, aes(x = factor(LevIncome), fill = factor(Cluster))) +
++   geom_bar(position = "dodge") +
++   labs(title = "Income Distribution Across Clusters",
++        x = "Income Level",
++        y = "Number of Customers",
++        fill = "Cluster") +
++   theme_minimal()
+2026-03-26 19:22:30.562 R[81378:4140886] The class 'NSSavePanel' overrides the method identifier.  This method is implemented by class 'NSWindow'
+> 
